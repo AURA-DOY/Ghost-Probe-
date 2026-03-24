@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<title>GhostProbe — Vulnerability Intelligence by 0x4ura</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne+Mono&family=Syne:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--void:#000008;--surface:rgba(6,3,22,0.94);--srf2:rgba(10,5,30,0.7);--edge:rgba(100,60,255,0.18);--edgehot:rgba(140,90,255,0.65);--neon:#8b5cf6;--neon2:#06b6d4;--neon3:#f43f5e;--gold:#eab308;--ink:#e2d9f3;--dim:#6b5f8a;--green:#10b981;--amber:#f59e0b;--red:#f43f5e;--fh:'Syne',sans-serif;--fm:'Syne Mono',monospace;--fb:'Space Grotesk',sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fb);background:var(--void);color:var(--ink);overflow-x:hidden}
+#gc{position:fixed;inset:0;z-index:0;pointer-events:none}
+.scanline{position:fixed;inset:0;z-index:1;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,10,.05) 2px,rgba(0,0,10,.05) 4px);pointer-events:none}
+.app{position:relative;z-index:2}
+nav{position:fixed;inset:0 0 auto 0;z-index:90;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 48px;background:rgba(0,0,8,.82);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--edge)}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;cursor:pointer}
+.lmark{width:32px;height:32px;border:2px solid var(--neon);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:.7rem;color:var(--neon);position:relative;overflow:hidden}
+.lmark::after{content:'';position:absolute;left:0;right:0;height:1px;background:var(--neon2);animation:sl 2s linear infinite}
+@keyframes sl{0%{top:32px}100%{top:-4px}}
+.ltext{font-family:var(--fh);font-weight:800;font-size:1.25rem;letter-spacing:-.5px;color:#fff}
+.ltext em{font-style:normal;color:var(--neon)}
+.nav-r{display:flex;align-items:center;gap:16px}
+.nl{font-family:var(--fm);font-size:.72rem;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;transition:color .2s;background:none;border:none;cursor:pointer}
+.nl:hover{color:var(--neon2)}
+.nsep{width:1px;height:20px;background:var(--edge)}
+.uchip{display:none;align-items:center;gap:8px;padding:5px 12px;background:rgba(139,92,246,.1);border:1px solid var(--edge);border-radius:20px;font-family:var(--fm);font-size:.68rem;color:var(--neon2);max-width:220px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.uchip.show{display:flex}
+.udot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0;animation:blk 1.4s infinite}
+.planbadge{font-size:.58rem;padding:2px 7px;border-radius:3px;font-family:var(--fm);letter-spacing:1px;text-transform:uppercase;font-weight:700;flex-shrink:0}
+.plan-free{background:rgba(6,182,212,.15);color:var(--neon2);border:1px solid rgba(6,182,212,.3)}
+.plan-pro{background:rgba(139,92,246,.2);color:#c4b5fd;border:1px solid rgba(139,92,246,.4)}
+.plan-advanced{background:rgba(244,63,94,.15);color:#fca5a5;border:1px solid rgba(244,63,94,.3)}
+.nbtn{font-family:var(--fm);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase;padding:8px 18px;border-radius:5px;cursor:pointer;transition:all .2s;border:none}
+.ng{background:transparent;border:1px solid var(--edgehot);color:var(--neon)}
+.ng:hover{background:rgba(139,92,246,.12)}
+.ns{background:var(--neon);border:1px solid var(--neon);color:#fff}
+.ns:hover{background:#7c3aed;transform:translateY(-1px)}
+.nlo{background:transparent;border:1px solid rgba(244,63,94,.35);color:var(--neon3)}
+.nlo:hover{background:rgba(244,63,94,.08)}
+.gone{display:none!important}
+.dstrip{margin-top:62px;background:repeating-linear-gradient(90deg,rgba(244,63,94,.06) 0,rgba(244,63,94,.06) 1px,transparent 1px,transparent 40px);border-top:1px solid rgba(244,63,94,.18);border-bottom:1px solid rgba(244,63,94,.18);padding:12px 48px;display:flex;align-items:center;gap:12px}
+.di{flex-shrink:0;animation:pr 2s infinite}
+@keyframes pr{0%,100%{opacity:1}50%{opacity:.35}}
+.dstrip p{font-family:var(--fm);font-size:.67rem;color:rgba(255,160,160,.7);line-height:1.6}
+.dstrip strong{color:var(--neon3)}
+.hero{min-height:100vh;display:grid;place-items:center;padding:120px 48px 80px;text-align:center}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border:1px solid rgba(6,182,212,.3);border-radius:100px;font-family:var(--fm);font-size:.64rem;letter-spacing:2.5px;color:var(--neon2);margin-bottom:36px;position:relative;overflow:hidden}
+.eyebrow::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(6,182,212,.08),transparent);animation:sh 2.5s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.pulse{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blk 1.4s infinite;flex-shrink:0}
+@keyframes blk{0%,100%{opacity:1}50%{opacity:.1}}
+.h1{font-family:var(--fh);font-weight:800;font-size:clamp(3rem,7.5vw,6.5rem);line-height:.95;letter-spacing:-2px;margin-bottom:28px}
+.h1a{color:#fff;display:block}
+.h1b{display:block;background:linear-gradient(100deg,var(--neon),var(--neon2) 50%,var(--neon3));background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gm 5s ease infinite alternate}
+@keyframes gm{0%{background-position:0%}100%{background-position:200%}}
+.hsub{font-size:1.05rem;color:var(--dim);max-width:560px;margin:0 auto 52px;line-height:1.75}
+.hbtns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:88px}
+.hbtn{font-family:var(--fh);font-weight:700;font-size:.9rem;letter-spacing:1px;padding:15px 38px;border-radius:8px;cursor:pointer;transition:all .25s;text-transform:uppercase;border:none}
+.hp{background:linear-gradient(135deg,var(--neon),#5b21b6);color:#fff;box-shadow:0 4px 32px rgba(139,92,246,.4)}
+.hp:hover{transform:translateY(-3px);box-shadow:0 10px 48px rgba(139,92,246,.6)}
+.ho{background:transparent;border:1px solid rgba(6,182,212,.5);color:var(--neon2)}
+.ho:hover{background:rgba(6,182,212,.08);transform:translateY(-2px)}
+.hstats{display:flex;gap:64px;justify-content:center;flex-wrap:wrap}
+.hs{text-align:center}
+.hsn{font-family:var(--fh);font-weight:800;font-size:2.2rem;letter-spacing:-1px;background:linear-gradient(135deg,var(--neon),var(--neon2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hsl{font-family:var(--fm);font-size:.6rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-top:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 48px}
+.sec{padding:110px 0}
+.kicker{font-family:var(--fm);font-size:.65rem;letter-spacing:4px;color:var(--neon2);text-transform:uppercase;margin-bottom:14px}
+.sh2{font-family:var(--fh);font-weight:800;font-size:clamp(1.8rem,4vw,3rem);letter-spacing:-1px;line-height:1.1;margin-bottom:14px;color:#fff}
+.sp{font-size:1rem;color:var(--dim);max-width:500px;line-height:1.75;margin-bottom:64px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px}
+.fc{background:var(--surface);border:1px solid var(--edge);border-radius:14px;padding:28px 26px;position:relative;overflow:hidden;transition:border-color .25s,transform .25s,box-shadow .25s}
+.fc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),transparent);opacity:0;transition:opacity .3s}
+.fc:hover{border-color:var(--edgehot);transform:translateY(-5px);box-shadow:0 16px 48px rgba(139,92,246,.15)}
+.fc:hover::before{opacity:1}
+.fcf{border-color:rgba(6,182,212,.18)}
+.fcf:hover{border-color:rgba(6,182,212,.55)!important;box-shadow:0 16px 48px rgba(6,182,212,.12)!important}
+.ftag{display:inline-block;padding:3px 10px;border-radius:4px;font-family:var(--fm);font-size:.6rem;letter-spacing:2px;font-weight:700;margin-bottom:18px}
+.tfr{background:rgba(6,182,212,.12);color:var(--neon2);border:1px solid rgba(6,182,212,.28)}
+.tpr{background:rgba(234,179,8,.1);color:var(--gold);border:1px solid rgba(234,179,8,.25)}
+.tadv{background:rgba(244,63,94,.1);color:var(--neon3);border:1px solid rgba(244,63,94,.25)}
+.fico{font-size:1.8rem;margin-bottom:14px;display:block}
+.fc h3{font-family:var(--fh);font-weight:700;font-size:1rem;color:#fff;margin-bottom:8px}
+.fc p{font-size:.85rem;color:var(--dim);line-height:1.65}
+.tsec{padding:100px 0;background:radial-gradient(ellipse at 50% 50%,rgba(139,92,246,.06) 0%,transparent 70%)}
+.twrap{max-width:920px;margin:0 auto;padding:0 48px}
+.tbox{background:rgba(2,1,8,.97);border:1px solid var(--edge);border-radius:18px;overflow:hidden;box-shadow:0 0 0 1px rgba(139,92,246,.08),0 32px 80px rgba(0,0,0,.7)}
+.thd{display:flex;align-items:center;padding:14px 20px;background:rgba(8,4,24,.9);border-bottom:1px solid var(--edge);gap:10px}
+.tdots{display:flex;gap:6px}
+.td{width:11px;height:11px;border-radius:50%}
+.tdr{background:#ff5f57}.tdy{background:#febc2e}.tdg{background:#28c840}
+.ttl{font-family:var(--fm);font-size:.68rem;color:var(--dim);margin:0 auto;letter-spacing:2px}
+.tplan{font-family:var(--fm);font-size:.6rem;padding:2px 8px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+.tplan-free{background:rgba(6,182,212,.15);color:var(--neon2)}
+.tplan-pro{background:rgba(139,92,246,.2);color:#c4b5fd}
+.tplan-advanced{background:rgba(244,63,94,.15);color:#fca5a5}
+.tbd{padding:24px 28px}
+.tinrow{display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap}
+.tin{flex:1;min-width:220px;background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:7px;padding:11px 15px;color:var(--ink);font-family:var(--fm);font-size:.8rem;outline:none;transition:border-color .2s}
+.tin:focus{border-color:var(--neon2);box-shadow:0 0 0 3px rgba(6,182,212,.1)}
+.tin::placeholder{color:var(--dim)}
+.brun{padding:11px 26px;background:linear-gradient(135deg,var(--neon),#5b21b6);border:none;border-radius:7px;color:#fff;font-family:var(--fh);font-weight:700;font-size:.88rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;white-space:nowrap}
+.brun:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(139,92,246,.45)}
+.brun:disabled{opacity:.5;transform:none;cursor:not-allowed}
+.tout{font-family:var(--fm);font-size:.75rem;line-height:2.1;min-height:220px;max-height:380px;overflow-y:auto;padding-right:6px}
+.tout::-webkit-scrollbar{width:3px}
+.tout::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
+.ll{display:flex;gap:10px;align-items:flex-start}
+.lt{color:var(--dim);flex-shrink:0}
+.lok{color:var(--green)}.linf{color:var(--neon2)}.lwrn{color:var(--amber)}.ldng{color:var(--red)}.lpro{color:var(--gold)}.lmsg{color:var(--ink)}.lact{color:#c4b5fd}
+.tprog{margin-top:14px;height:2px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.tbar{height:100%;width:0%;border-radius:2px;background:linear-gradient(90deg,var(--neon),var(--neon2));transition:width .3s ease}
+.lockrow{display:none;margin-top:16px;padding:14px 16px;border:1px dashed rgba(234,179,8,.3);border-radius:8px;background:rgba(234,179,8,.04);gap:10px;align-items:center;font-family:var(--fm);font-size:.75rem;color:var(--gold)}
+.lockrow a{color:var(--gold);text-decoration:underline;cursor:pointer}
+.export-row{display:none;margin-top:14px;gap:10px;flex-wrap:wrap}
+.bpdf{display:flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);border-radius:7px;color:var(--green);font-family:var(--fh);font-weight:700;font-size:.82rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.bpdf:hover{background:rgba(16,185,129,.18);transform:translateY(-1px)}
+.btxt{display:flex;align-items:center;gap:8px;padding:10px 22px;background:rgba(6,182,212,.08);border:1px solid rgba(6,182,212,.3);border-radius:7px;color:var(--neon2);font-family:var(--fh);font-weight:700;font-size:.82rem;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.btxt:hover{background:rgba(6,182,212,.15);transform:translateY(-1px)}
+.pro-scan-row{display:none;margin-top:14px;padding:16px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:8px;flex-direction:column;gap:12px}
+.pro-scan-row.show{display:flex}
+.pro-scan-title{font-family:var(--fm);font-size:.7rem;letter-spacing:2px;color:var(--neon);text-transform:uppercase}
+.pro-checks{display:flex;gap:8px;flex-wrap:wrap}
+.pcheck{padding:7px 14px;background:rgba(255,255,255,.04);border:1px solid var(--edge);border-radius:6px;font-family:var(--fm);font-size:.7rem;color:var(--dim);cursor:pointer;transition:all .2s}
+.pcheck:hover{border-color:var(--neon);color:var(--neon)}
+.pcheck.active{background:rgba(139,92,246,.2);border-color:var(--neon);color:#c4b5fd}
+.btn-active-scan{padding:10px 24px;background:linear-gradient(135deg,var(--neon),#5b21b6);border:none;border-radius:7px;color:#fff;font-family:var(--fh);font-weight:700;font-size:.82rem;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;align-self:flex-start}
+.btn-active-scan:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(139,92,246,.45)}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:22px;max-width:960px}
+.pc{background:var(--surface);border:1px solid var(--edge);border-radius:18px;padding:38px 30px;position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s}
+.pc:hover{transform:translateY(-4px)}
+.pcpro{border-color:var(--neon);box-shadow:0 0 50px rgba(139,92,246,.18)}
+.pcpro::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--neon),var(--neon2))}
+.pcadv{border-color:var(--neon3);box-shadow:0 0 50px rgba(244,63,94,.15)}
+.pcadv::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--neon3),var(--gold))}
+.pcbadge{position:absolute;top:18px;right:18px;font-family:var(--fm);font-size:.58rem;letter-spacing:1.5px;padding:3px 9px;border-radius:3px;text-transform:uppercase}
+.badge-pop{background:var(--neon);color:#fff}
+.badge-adv{background:var(--neon3);color:#fff}
+.pctier{font-family:var(--fm);font-size:.62rem;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-bottom:10px}
+.pcprice{font-family:var(--fh);font-weight:800;font-size:3rem;color:#fff;letter-spacing:-2px;line-height:1}
+.pcprice sup{font-size:1.2rem;vertical-align:super;color:var(--dim)}
+.pcprice sub{font-size:1rem;vertical-align:baseline;color:var(--dim);font-weight:400}
+.pcinr{font-family:var(--fm);font-size:.78rem;color:var(--dim);margin-top:4px;margin-bottom:2px}
+.pcinr span{color:var(--neon2)}
+.pcper{font-size:.78rem;color:var(--dim);margin-bottom:22px}
+.pcdiv{height:1px;background:var(--edge);margin-bottom:22px}
+.pclist{list-style:none;margin-bottom:30px}
+.pclist li{display:flex;align-items:center;gap:9px;font-size:.85rem;color:var(--dim);padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pclist li.on{color:var(--ink)}
+.chk{color:var(--green)}.lck{color:var(--gold)}.lck2{color:var(--neon3)}
+.pbtn{width:100%;padding:13px;border-radius:9px;font-family:var(--fh);font-size:.9rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:none}
+.pghost{background:transparent;border:1px solid var(--edge);color:var(--dim)}
+.pghost:hover{border-color:var(--neon2);color:var(--neon2)}
+.ppro{background:linear-gradient(135deg,var(--neon),#5b21b6);color:#fff;box-shadow:0 4px 22px rgba(139,92,246,.38)}
+.ppro:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(139,92,246,.58)}
+.padv{background:linear-gradient(135deg,var(--neon3),#991b3a);color:#fff;box-shadow:0 4px 22px rgba(244,63,94,.3)}
+.padv:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(244,63,94,.5)}
+.pcurrent{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3) !important;color:var(--green);pointer-events:none}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;background:var(--surface);border:1px solid var(--edge);border-radius:18px;padding:36px}
+.sgi{display:flex;gap:14px;align-items:flex-start}
+.sgi h4{font-family:var(--fm);font-size:.68rem;letter-spacing:1.5px;text-transform:uppercase;color:#fff;margin-bottom:5px}
+.sgi p{font-size:.78rem;color:var(--dim);line-height:1.6}
+.overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,8,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);align-items:center;justify-content:center;padding:20px}
+.overlay.on{display:flex}
+.modal{background:rgba(6,3,20,.98);border:1px solid var(--edge);border-radius:22px;padding:44px 38px;width:100%;max-width:460px;position:relative;box-shadow:0 0 0 1px rgba(139,92,246,.08),0 40px 100px rgba(0,0,0,.8);animation:mo .28s cubic-bezier(.34,1.2,.64,1);max-height:90vh;overflow-y:auto}
+@keyframes mo{from{opacity:0;transform:scale(.93) translateY(24px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,var(--neon),var(--neon2),var(--neon3));border-radius:22px 22px 0 0}
+.mcls{position:absolute;top:14px;right:14px;width:30px;height:30px;background:rgba(255,255,255,.04);border:1px solid var(--edge);border-radius:6px;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:all .2s}
+.mcls:hover{border-color:var(--neon3);color:var(--neon3);background:rgba(244,63,94,.08)}
+.mlogo{font-family:var(--fh);font-weight:800;font-size:.95rem;color:var(--neon);margin-bottom:6px}
+.mtitle{font-family:var(--fh);font-weight:800;font-size:1.7rem;letter-spacing:-.8px;color:#fff;margin-bottom:4px}
+.msub{font-size:.84rem;color:var(--dim);margin-bottom:28px}
+.tabs{display:flex;background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:9px;padding:4px;margin-bottom:26px;gap:4px}
+.tab{flex:1;padding:9px;border:none;border-radius:7px;background:transparent;color:var(--dim);font-family:var(--fh);font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s}
+.tab.on{background:var(--neon);color:#fff;box-shadow:0 2px 14px rgba(139,92,246,.4)}
+.aform{display:none;flex-direction:column;gap:14px}
+.aform.on{display:flex}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-family:var(--fm);font-size:.65rem;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase}
+.fi{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:8px;padding:11px 14px;color:var(--ink);font-family:var(--fb);font-size:.92rem;outline:none;transition:border-color .2s,box-shadow .2s;width:100%}
+.fi:focus{border-color:var(--neon);box-shadow:0 0 0 3px rgba(139,92,246,.12);background:rgba(139,92,246,.04)}
+.fi::placeholder{color:rgba(107,95,138,.5)}
+.fhint{font-size:.68rem;color:var(--dim)}
+.fhint.ok{color:var(--green)}
+.pwdstr{height:2px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-top:3px}
+.strfill{height:100%;width:0%;border-radius:2px;transition:all .3s}
+.rowbw{display:flex;justify-content:space-between;align-items:center;font-size:.78rem}
+.rowbw label{display:flex;align-items:center;gap:6px;color:var(--dim);cursor:pointer}
+.rowbw a{color:var(--neon2);font-size:.78rem;cursor:pointer}
+.abtn{padding:14px;background:linear-gradient(135deg,var(--neon),#5b21b6);border:none;border-radius:9px;color:#fff;font-family:var(--fh);font-size:.95rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 22px rgba(139,92,246,.32);width:100%}
+.abtn:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(139,92,246,.55)}
+.abtn:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.lbox{padding:12px 13px;border:1px solid rgba(244,63,94,.18);border-radius:8px;background:rgba(244,63,94,.04);font-family:var(--fm);font-size:.65rem;color:rgba(255,160,160,.65);line-height:1.6}
+.agrow{display:flex;align-items:flex-start;gap:9px;font-size:.78rem;color:var(--dim);line-height:1.55;cursor:pointer}
+.agrow input[type=checkbox]{accent-color:var(--neon);flex-shrink:0;margin-top:2px;cursor:pointer}
+.msg{font-family:var(--fm);font-size:.72rem;padding:10px 12px;border-radius:7px;display:none;line-height:1.5;word-break:break-word}
+.msg.on{display:block}
+.msg-err{color:var(--red);background:rgba(244,63,94,.07);border:1px solid rgba(244,63,94,.22)}
+.msg-ok{color:var(--green);background:rgba(16,185,129,.07);border:1px solid rgba(16,185,129,.22)}
+.pay-modal{background:rgba(6,3,20,.98);border:1px solid var(--edge);border-radius:22px;padding:44px 38px;width:100%;max-width:520px;position:relative;box-shadow:0 0 0 1px rgba(139,92,246,.08),0 40px 100px rgba(0,0,0,.8);animation:mo .28s cubic-bezier(.34,1.2,.64,1);max-height:92vh;overflow-y:auto}
+.pay-modal.pay-pro::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;border-radius:22px 22px 0 0;background:linear-gradient(90deg,var(--neon),var(--neon2))}
+.pay-modal.pay-adv::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;border-radius:22px 22px 0 0;background:linear-gradient(90deg,var(--neon3),var(--gold))}
+.pay-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.pay-plan-name{font-family:var(--fh);font-weight:800;font-size:1.5rem;color:#fff;letter-spacing:-.5px}
+.pay-price-usd{font-family:var(--fh);font-weight:800;font-size:1.8rem;color:#fff;letter-spacing:-1px;text-align:right}
+.pay-price-inr{font-family:var(--fm);font-size:.75rem;color:var(--neon2);margin-top:2px;text-align:right}
+.pay-divider{height:1px;background:var(--edge);margin:20px 0}
+.pay-tabs{display:flex;gap:10px;margin-bottom:24px}
+.pay-tab{flex:1;padding:12px;border:1px solid var(--edge);border-radius:10px;background:transparent;color:var(--dim);font-family:var(--fh);font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pay-tab:hover{border-color:var(--edgehot);color:var(--ink)}
+.pay-tab.on{border-color:var(--neon);background:rgba(139,92,246,.1);color:#fff}
+.pay-tab-icon{font-size:1.4rem}
+.pay-tab-label{font-size:.68rem;letter-spacing:1px;text-transform:uppercase;font-family:var(--fm)}
+.upi-section,.paypal-section{display:flex;flex-direction:column;align-items:center;gap:16px}
+.qr-wrapper{padding:16px;background:#fff;border-radius:12px;display:inline-block}
+.qr-wrapper img{width:180px;height:180px;display:block}
+.upi-amount-badge{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:10px 20px;font-family:var(--fm);font-size:.85rem;color:var(--green);text-align:center;width:100%}
+.upi-amount-badge strong{font-size:1.1rem;display:block;margin-bottom:2px}
+.upi-steps{width:100%;list-style:none;display:flex;flex-direction:column;gap:8px}
+.upi-steps li{display:flex;align-items:flex-start;gap:10px;font-size:.82rem;color:var(--dim);padding:8px 12px;background:rgba(255,255,255,.02);border-radius:6px;border:1px solid var(--edge)}
+.upi-steps li span{flex-shrink:0;width:20px;height:20px;background:rgba(139,92,246,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--neon);font-weight:700;font-family:var(--fm)}
+.upi-confirm-note{font-family:var(--fm);font-size:.68rem;color:var(--amber);padding:10px 12px;border:1px solid rgba(245,158,11,.2);border-radius:7px;background:rgba(245,158,11,.05);line-height:1.6;text-align:center;width:100%}
+.paypal-email-box{background:rgba(255,255,255,.04);border:1px solid var(--edge);border-radius:8px;padding:12px 16px;font-family:var(--fm);font-size:.78rem;color:var(--dim);text-align:center;width:100%}
+.paypal-email-box strong{color:var(--neon2);display:block;margin-bottom:2px;font-size:.9rem}
+.pay-confirm-btn{width:100%;padding:14px;border:none;border-radius:10px;font-family:var(--fh);font-size:1rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;margin-top:8px}
+.pay-confirm-pro{background:linear-gradient(135deg,var(--neon),#5b21b6);color:#fff;box-shadow:0 4px 22px rgba(139,92,246,.38)}
+.pay-confirm-pro:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(139,92,246,.58)}
+.pay-confirm-adv{background:linear-gradient(135deg,var(--neon3),#991b3a);color:#fff;box-shadow:0 4px 22px rgba(244,63,94,.3)}
+.pay-confirm-adv:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(244,63,94,.5)}
+.pay-legal{font-family:var(--fm);font-size:.62rem;color:var(--dim);text-align:center;line-height:1.6;margin-top:4px}
+.toast{position:fixed;bottom:24px;right:24px;z-index:300;background:rgba(6,3,20,.97);border:1px solid var(--edge);border-radius:12px;padding:14px 18px;min-width:280px;max-width:360px;box-shadow:0 8px 36px rgba(0,0,0,.6);transform:translateX(120%);transition:transform .4s cubic-bezier(.34,1.2,.64,1)}
+.toast.on{transform:translateX(0)}
+.tok{border-color:rgba(16,185,129,.4)}.terr{border-color:rgba(244,63,94,.4)}
+.tott{font-family:var(--fh);font-weight:700;font-size:.9rem;margin-bottom:3px}
+.tok .tott{color:var(--green)}.terr .tott{color:var(--red)}
+.totm{font-size:.78rem;color:var(--dim)}
+.fdisc{background:rgba(244,63,94,.04);border-top:1px solid rgba(244,63,94,.15);border-bottom:1px solid rgba(244,63,94,.15);padding:22px 48px;text-align:center}
+.fdisc p{font-family:var(--fm);font-size:.67rem;color:rgba(255,160,160,.65);line-height:1.8;max-width:900px;margin:0 auto}
+.fdisc strong{color:var(--neon3)}
+footer{padding:70px 48px 40px;max-width:1180px;margin:0 auto;display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr;gap:48px}
+.fbrand p{font-size:.84rem;color:var(--dim);line-height:1.7;margin-top:14px;max-width:270px}
+.fcreator{display:flex;align-items:center;gap:8px;margin-top:18px;padding:10px 14px;background:var(--srf2);border:1px solid var(--edge);border-radius:8px;font-family:var(--fm);font-size:.68rem;color:var(--dim);max-width:210px}
+.fcreator a{color:var(--neon2);text-decoration:none}
+.fcol h4{font-family:var(--fm);font-size:.62rem;letter-spacing:3px;text-transform:uppercase;color:var(--neon2);margin-bottom:18px}
+.fcol a{display:block;color:var(--dim);text-decoration:none;font-size:.84rem;padding:4px 0;transition:color .2s;cursor:pointer}
+.fcol a:hover{color:var(--ink)}
+.fbot{max-width:1180px;margin:0 auto;padding:20px 48px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--edge);font-family:var(--fm);font-size:.64rem;color:var(--dim)}
+.fbot a{color:var(--neon2);text-decoration:none}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--void)}::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:3px}
+@media(max-width:768px){nav{padding:0 20px}.nav-r .nl,.nsep{display:none}.wrap,.twrap{padding:0 20px}footer{grid-template-columns:1fr 1fr;padding:50px 20px 30px}.fbrand{grid-column:1/-1}.dstrip,.fdisc{padding:12px 20px}.fbot{padding:16px 20px;flex-direction:column;gap:8px;text-align:center}.modal,.pay-modal{padding:32px 20px}.hero{padding:100px 20px 60px}}
+</style>
+</head>
+<body>
+<canvas id="gc"></canvas>
+<div class="scanline" aria-hidden="true"></div>
+<div class="app">
+
+<nav>
+  <a class="logo" href="#"><div class="lmark">GP</div><span class="ltext"><em>Ghost</em>Probe</span></a>
+  <div class="nav-r">
+    <button class="nl" onclick="navTo('features')">Features</button>
+    <button class="nl" onclick="navTo('scanner')">Scanner</button>
+    <button class="nl" onclick="navTo('pricing')">Pricing</button>
+    <div class="nsep"></div>
+    <div class="uchip" id="uchip"><div class="udot"></div><span id="uname"></span><span class="planbadge plan-free" id="planBadge">free</span></div>
+    <button class="nbtn ng" id="btnLogin" onclick="openModal('login')">Log In</button>
+    <button class="nbtn ns" id="btnSignup" onclick="openModal('signup')">Get Access</button>
+    <button class="nbtn nlo gone" id="btnLogout" onclick="doLogout()">Log Out</button>
+  </div>
+</nav>
+
+<div class="dstrip"><span class="di">&#x26A0;</span><p><strong>AUTHORIZED USE ONLY.</strong> GhostProbe is for security professionals with explicit written authorization. Unauthorized scanning is illegal under CFAA, IT Act 2000 &amp; equivalent laws. <strong>All activity is permanently logged.</strong></p></div>
+
+<section class="hero" id="home">
+  <div>
+    <div class="eyebrow"><div class="pulse"></div>PASSIVE RECON FREE &nbsp;&middot;&nbsp; ACTIVE INTEL PRO &amp; ADVANCED</div>
+    <h1 class="h1"><span class="h1a">EXPOSE THE</span><span class="h1b">INVISIBLE</span></h1>
+    <p class="hsub">From passive OSINT to deep active exploitation analysis. Intelligence-grade vulnerability scanning from a single URL or IP, with exportable PDF reports.</p>
+    <div class="hbtns">
+      <button class="hbtn hp" id="heroBtn" onclick="heroAction()">Start Free Scan</button>
+      <button class="hbtn ho" onclick="navTo('scanner')">Live Demo</button>
+    </div>
+    <div class="hstats">
+      <div class="hs"><div class="hsn">47+</div><div class="hsl">Vuln Checks</div></div>
+      <div class="hs"><div class="hsn">PDF</div><div class="hsl">Export Reports</div></div>
+      <div class="hs"><div class="hsn">AES-256</div><div class="hsl">Encryption</div></div>
+      <div class="hs"><div class="hsn">SOC2</div><div class="hsl">Ready</div></div>
+    </div>
+  </div>
+</section>
+
+<div id="features"><div class="wrap sec">
+  <div class="kicker">// 01 &mdash; Capabilities</div>
+  <h2 class="sh2">What GhostProbe Detects</h2>
+  <p class="sp">Passive recon is free forever. Active scanning requires Pro or Advanced.</p>
+  <div class="fgrid">
+    <div class="fc fcf"><span class="ftag tfr">FREE</span><span class="fico">&#x1F310;</span><h3>DNS &amp; Subdomain Enumeration</h3><p>Passive DNS, A/MX/NS/TXT records, subdomain discovery, zone transfer detection.</p></div>
+    <div class="fc fcf"><span class="ftag tfr">FREE</span><span class="fico">&#x1F4CB;</span><h3>WHOIS &amp; IP Intelligence</h3><p>Registrar data, geolocation, ASN, CIDR mapping, 88-point DNSBL check.</p></div>
+    <div class="fc fcf"><span class="ftag tfr">FREE</span><span class="fico">&#x1F512;</span><h3>SSL/TLS Certificate Audit</h3><p>Chain validation, expiry alerts, weak cipher detection, HSTS check.</p></div>
+    <div class="fc fcf"><span class="ftag tfr">FREE</span><span class="fico">&#x1F4E1;</span><h3>HTTP Header Security</h3><p>Missing headers, CORS misconfiguration, server banner leakage, cookie flags.</p></div>
+    <div class="fc"><span class="ftag tpr">PRO</span><span class="fico">&#x1F5C2;&#xFE0F;</span><h3>Directory Enumeration</h3><p>Active brute-force, hidden admin panels, backup file detection, path traversal.</p></div>
+    <div class="fc"><span class="ftag tpr">PRO</span><span class="fico">&#x1F489;</span><h3>XSS Detection Engine</h3><p>Reflected, stored, DOM-based XSS across all input vectors with payload evidence.</p></div>
+    <div class="fc"><span class="ftag tpr">PRO</span><span class="fico">&#x1F6E1;&#xFE0F;</span><h3>CSRF Token Analysis</h3><p>CSRF detection, SameSite auditing, token predictability, form security scoring.</p></div>
+    <div class="fc"><span class="ftag tpr">PRO</span><span class="fico">&#x1F6AA;</span><h3>Auth Bypass Testing</h3><p>JWT weakness, session fixation, default credentials, OAuth misconfigs.</p></div>
+    <div class="fc"><span class="ftag tadv">ADVANCED</span><span class="fico">&#x1F9EC;</span><h3>SQLi Detection</h3><p>Error-based, blind, time-based injection with full database fingerprinting.</p></div>
+    <div class="fc"><span class="ftag tadv">ADVANCED</span><span class="fico">&#x1F513;</span><h3>Port &amp; Service Scanning</h3><p>Full port enum, service version detection, CVE mapping, risk scoring.</p></div>
+  </div>
+</div></div>
+
+<div id="scanner" class="tsec"><div class="twrap">
+  <div style="text-align:center;margin-bottom:40px">
+    <div class="kicker" style="display:block">// 02 &mdash; Scanner</div>
+    <h2 class="sh2" style="font-size:1.9rem">Vulnerability Scanner</h2>
+  </div>
+  <div class="tbox">
+    <div class="thd">
+      <div class="tdots"><div class="td tdr"></div><div class="td tdy"></div><div class="td tdg"></div></div>
+      <div class="ttl">ghostprobe@terminal:~</div>
+      <span class="tplan tplan-free" id="termPlan">FREE</span>
+    </div>
+    <div class="tbd">
+      <div class="tinrow">
+        <input class="tin" id="tgt" type="text" placeholder="target URL or IP e.g. example.com" autocomplete="off" spellcheck="false"/>
+        <button class="brun" id="scanBtn" onclick="runScan()">Scan</button>
+      </div>
+      <div class="tout" id="tout">
+        <div class="ll"><span class="lt">[--:--:--]</span><span class="linf">GhostProbe engine ready. Enter a target to begin.</span></div>
+        <div class="ll"><span class="lt">[--:--:--]</span><span class="lmsg">Free tier: DNS, WHOIS, SSL, HTTP headers, subdomain recon</span></div>
+      </div>
+      <div class="tprog"><div class="tbar" id="tbar"></div></div>
+      <div class="lockrow" id="lockRow">&#x1F512; <span>Active recon requires <strong style="color:var(--gold)">Pro</strong> or <strong style="color:var(--neon3)">Advanced</strong>. <a onclick="navTo('pricing')">Upgrade</a></span></div>
+      <div class="pro-scan-row" id="proScanRow">
+        <div class="pro-scan-title">Active Scan Modules</div>
+        <div class="pro-checks" id="proChecks">
+          <button class="pcheck active" data-check="xss">XSS</button>
+          <button class="pcheck active" data-check="csrf">CSRF</button>
+          <button class="pcheck active" data-check="auth">Auth Bypass</button>
+          <button class="pcheck active" data-check="dirs">Dir Enum</button>
+          <button class="pcheck" data-check="sqli" id="sqliCheck">SQLi (ADV)</button>
+          <button class="pcheck" data-check="ports" id="portsCheck">Port Scan (ADV)</button>
+          <button class="pcheck" data-check="cve" id="cveCheck">CVE Map (ADV)</button>
+        </div>
+        <button class="btn-active-scan" onclick="runActiveScan()">Run Active Scan</button>
+      </div>
+      <div class="export-row" id="exportRow">
+        <button class="bpdf" onclick="exportPDF()">Download PDF Report</button>
+        <button class="btxt" onclick="exportTXT()">Download TXT Report</button>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div id="pricing"><div class="wrap sec">
+  <div class="kicker">// 03 &mdash; Pricing</div>
+  <h2 class="sh2">Simple, Honest Pricing</h2>
+  <p class="sp">Free forever for passive recon. Upgrade for active scanning power.</p>
+  <div class="pgrid">
+    <div class="pc">
+      <div class="pctier">Free</div>
+      <div class="pcprice"><sup>$</sup>0<sub>/mo</sub></div>
+      <div class="pcinr">&#x20B9;0 <span>forever</span></div>
+      <div class="pcper">No card required</div>
+      <div class="pcdiv"></div>
+      <ul class="pclist">
+        <li class="on"><span class="chk">&#x2713;</span> DNS &amp; Subdomain Recon</li>
+        <li class="on"><span class="chk">&#x2713;</span> WHOIS &amp; IP Lookup</li>
+        <li class="on"><span class="chk">&#x2713;</span> SSL/TLS Audit</li>
+        <li class="on"><span class="chk">&#x2713;</span> HTTP Header Analysis</li>
+        <li class="on"><span class="chk">&#x2713;</span> PDF &amp; TXT export</li>
+        <li class="on"><span class="chk">&#x2713;</span> 10 scans / day</li>
+        <li><span class="lck">&#x1F512;</span> Active Port Scanning</li>
+        <li><span class="lck">&#x1F512;</span> XSS / CSRF / Auth Bypass</li>
+      </ul>
+      <button class="pbtn pghost" id="freeBtn" onclick="handlePlanClick('free')">Start Free</button>
+    </div>
+    <div class="pc pcpro">
+      <div class="pcbadge badge-pop">POPULAR</div>
+      <div class="pctier">Pro</div>
+      <div class="pcprice"><sup>$</sup>19<sub>/mo</sub></div>
+      <div class="pcinr">&#x2248; <span>&#x20B9;1,590 / month</span></div>
+      <div class="pcper">or $169/yr &middot; save 26%</div>
+      <div class="pcdiv"></div>
+      <ul class="pclist">
+        <li class="on"><span class="chk">&#x2713;</span> Everything in Free</li>
+        <li class="on"><span class="chk">&#x2713;</span> XSS / SQLi / CSRF Scan</li>
+        <li class="on"><span class="chk">&#x2713;</span> Auth Bypass Testing</li>
+        <li class="on"><span class="chk">&#x2713;</span> Directory Enumeration</li>
+        <li class="on"><span class="chk">&#x2713;</span> Active Port Scanning</li>
+        <li class="on"><span class="chk">&#x2713;</span> 500 scans / day</li>
+        <li class="on"><span class="chk">&#x2713;</span> Full Scan History</li>
+        <li><span class="lck2">&#x1F512;</span> CVE Mapping &amp; API</li>
+      </ul>
+      <button class="pbtn ppro" id="proBtn" onclick="handlePlanClick('pro')">Get Pro</button>
+    </div>
+    <div class="pc pcadv">
+      <div class="pcbadge badge-adv">ADVANCED</div>
+      <div class="pctier">Advanced</div>
+      <div class="pcprice"><sup>$</sup>89<sub>/mo</sub></div>
+      <div class="pcinr">&#x2248; <span>&#x20B9;7,450 / month</span></div>
+      <div class="pcper">or $799/yr &middot; save 25%</div>
+      <div class="pcdiv"></div>
+      <ul class="pclist">
+        <li class="on"><span class="chk">&#x2713;</span> Everything in Pro</li>
+        <li class="on"><span class="chk">&#x2713;</span> Unlimited scans</li>
+        <li class="on"><span class="chk">&#x2713;</span> CVE Mapping &amp; Risk Score</li>
+        <li class="on"><span class="chk">&#x2713;</span> REST API access</li>
+        <li class="on"><span class="chk">&#x2713;</span> Team management</li>
+        <li class="on"><span class="chk">&#x2713;</span> Custom scan policies</li>
+        <li class="on"><span class="chk">&#x2713;</span> White-label PDF reports</li>
+        <li class="on"><span class="chk">&#x2713;</span> Priority SLA &amp; SOC2</li>
+      </ul>
+      <button class="pbtn padv" id="advBtn" onclick="handlePlanClick('advanced')">Get Advanced</button>
+    </div>
+  </div>
+</div></div>
+
+<div id="security"><div class="wrap sec" style="padding-top:0">
+  <div class="kicker">// 04 &mdash; Security</div>
+  <h2 class="sh2">We Secure Our Own House</h2>
+  <p class="sp">Every vulnerability we scan for, we protect against.</p>
+  <div class="sgrid">
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F510;</span><div><h4>Zero-Knowledge Passwords</h4><p>bcrypt via Supabase Auth. Never stored in plaintext.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F36A;</span><div><h4>HttpOnly Cookies</h4><p>JWT in httpOnly, Secure, SameSite=Strict. XSS-resistant.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F6E1;&#xFE0F;</span><div><h4>Row Level Security</h4><p>PostgreSQL RLS - users only access their own rows.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F511;</span><div><h4>MFA / TOTP</h4><p>2FA available for Pro+ accounts.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F4CA;</span><div><h4>Immutable Audit Logs</h4><p>No DELETE policy on scan_logs. Permanent tamper-proof trail.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F310;</span><div><h4>TLS 1.3 Only</h4><p>Supabase enforces TLS 1.3. HSTS preloaded.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F6A6;</span><div><h4>Rate Limiting</h4><p>Built-in rate limits on all auth endpoints.</p></div></div>
+    <div class="sgi"><span style="font-size:1.3rem;flex-shrink:0">&#x1F4B3;</span><div><h4>PCI-DSS via Stripe</h4><p>Zero card data stored. Stripe tokenizes payments.</p></div></div>
+  </div>
+</div></div>
+
+<div class="fdisc"><p><strong>&#x26A0; FULL LEGAL DISCLAIMER</strong> &mdash; GhostProbe is for <strong>authorized security assessments only</strong>. Explicit written authorization required. Unauthorized use is criminal under CFAA, IT Act 2000, Computer Misuse Act &amp; EU Directive 2013/40/EU. GhostProbe and <strong>0x4ura</strong> assume zero liability. All scans permanently logged. <strong>By using GhostProbe you accept full legal responsibility.</strong></p></div>
+
+<footer>
+  <div class="fbrand">
+    <div class="logo"><div class="lmark">GP</div><span class="ltext"><em>Ghost</em>Probe</span></div>
+    <p>Intelligence-grade vulnerability scanning. Built for security professionals, researchers &amp; defensive teams.</p>
+    <div class="fcreator"><span>&#x1F47E;</span><span>Built by <a href="https://instagram.com/0x4ura" target="_blank" rel="noopener noreferrer">@0x4ura</a></span></div>
+  </div>
+  <div class="fcol"><h4>Product</h4><a onclick="navTo('features')">Features</a><a onclick="navTo('pricing')">Pricing</a><a>API Docs</a><a>Changelog</a></div>
+  <div class="fcol"><h4>Legal</h4><a>Terms of Service</a><a>Privacy Policy</a><a>Disclaimer</a><a>Bug Bounty</a></div>
+  <div class="fcol"><h4>Connect</h4><a href="https://instagram.com/0x4ura" target="_blank" rel="noopener noreferrer">Instagram @0x4ura</a><a>Security Contact</a><a>Status Page</a><a>Support</a></div>
+</footer>
+<div class="fbot">
+  <span>&copy; 2025 GhostProbe &mdash; by <a href="https://instagram.com/0x4ura" target="_blank" rel="noopener noreferrer">0x4ura</a> &mdash; all scan activity permanently logged</span>
+  <span>TLS 1.3 &middot; AES-256 &middot; HSTS &middot; SOC2 Ready</span>
+</div>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="overlay" id="authOverlay">
+  <div class="modal">
+    <button class="mcls" onclick="closeModal()">&#x2715;</button>
+    <div class="mlogo">GhostProbe</div>
+    <h2 class="mtitle" id="mtitle">Welcome Back</h2>
+    <p class="msub" id="msub">Sign in to your secure account</p>
+    <div class="tabs" id="tabRow">
+      <button class="tab on" id="t-login" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" id="t-signup" onclick="switchTab('signup')">Create Account</button>
+    </div>
+    <div class="aform on" id="f-login">
+      <div class="msg msg-err" id="lerr"></div><div class="msg msg-ok" id="lsuc"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="l-email" type="email" placeholder="you@company.com" autocomplete="email"/></div>
+      <div class="fg"><label class="fl">Password</label><input class="fi" id="l-pass" type="password" placeholder="your password" autocomplete="current-password"/></div>
+      <div class="rowbw"><label><input type="checkbox" style="accent-color:var(--neon)"> Remember me</label><a onclick="switchTab('forgot')">Forgot password?</a></div>
+      <button class="abtn" id="loginBtn" onclick="doLogin()">Sign In</button>
+      <div class="lbox">By signing in you confirm all scans target authorized systems. All activity is permanently logged.</div>
+    </div>
+    <div class="aform" id="f-signup">
+      <div class="msg msg-err" id="serr"></div><div class="msg msg-ok" id="ssuc"></div>
+      <div class="fg"><label class="fl">Full Name</label><input class="fi" id="s-name" type="text" placeholder="John Smith" autocomplete="name"/></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="s-email" type="email" placeholder="you@company.com" autocomplete="email"/><span class="fhint ok">Encrypted - Never sold</span></div>
+      <div class="fg"><label class="fl">Password</label><input class="fi" id="s-pass" type="password" placeholder="Min 12 chars, mixed case, symbols" autocomplete="new-password" oninput="pwStr(this.value)"/><div class="pwdstr"><div class="strfill" id="strf"></div></div><span class="fhint" id="strl">Enter a strong password</span></div>
+      <div class="fg"><label class="fl">Primary Use Case</label><select class="fi" id="s-use"><option value="">Select your role</option><option>Security Researcher</option><option>Penetration Tester (Authorized)</option><option>Bug Bounty Hunter</option><option>DevSecOps / Internal Audit</option><option>Cybersecurity Student</option><option>Company - Testing Own Systems</option></select></div>
+      <label class="agrow"><input type="checkbox" id="s-agree"/>I confirm I will only scan systems I own or have explicit written authorization. I accept full legal responsibility.</label>
+      <button class="abtn" id="signupBtn" onclick="doSignup()">Create Secure Account</button>
+      <div class="lbox">bcrypt hashed - httpOnly cookies - Audit trail - Misuse reported</div>
+    </div>
+    <div class="aform" id="f-forgot">
+      <div class="msg msg-err" id="ferr"></div><div class="msg msg-ok" id="fsuc"></div>
+      <p style="font-size:.84rem;color:var(--dim);margin-bottom:6px">Enter your email - we will send a reset link.</p>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="f-email" type="email" placeholder="you@company.com" autocomplete="email"/></div>
+      <button class="abtn" id="forgotBtn" onclick="doForgot()">Send Reset Link</button>
+      <button style="background:none;border:none;color:var(--neon2);font-family:var(--fm);font-size:.75rem;margin-top:6px;width:100%;text-align:center;padding:8px;cursor:pointer" onclick="switchTab('login')">Back to Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div class="overlay" id="payOverlay">
+  <div class="pay-modal" id="payModal">
+    <button class="mcls" onclick="closePayModal()">&#x2715;</button>
+    <div class="mlogo">GhostProbe</div>
+    <div class="pay-header">
+      <div><div class="pay-plan-name" id="payPlanName">Pro Plan</div><div style="font-family:var(--fm);font-size:.68rem;color:var(--dim);margin-top:4px">Monthly - cancel anytime</div></div>
+      <div><div class="pay-price-usd" id="payPriceUSD">$19/mo</div><div class="pay-price-inr" id="payPriceINR">approx Rs.1,590/month</div></div>
+    </div>
+    <div class="pay-divider"></div>
+    <div class="pay-tabs">
+      <button class="pay-tab on" id="pt-upi" onclick="switchPayTab('upi')"><span class="pay-tab-icon">&#x1F1EE;&#x1F1F3;</span><span class="pay-tab-label">UPI / QR</span></button>
+      <button class="pay-tab" id="pt-paypal" onclick="switchPayTab('paypal')"><span class="pay-tab-icon">&#x1F310;</span><span class="pay-tab-label">PayPal</span></button>
+    </div>
+    <div id="pay-upi" class="upi-section">
+      <div class="upi-amount-badge"><strong id="upiAmount">Rs.1,590</strong>Pay exactly this amount</div>
+      <div class="qr-wrapper"><img id="upiQR" src="" alt="UPI QR Code" width="180" height="180"/></div>
+      <ul class="upi-steps">
+        <li><span>1</span>Open GPay, PhonePe, Paytm or BHIM</li>
+        <li><span>2</span>Scan the QR code above</li>
+        <li><span>3</span>Pay <strong id="upiAmountStep" style="color:var(--green)">Rs.1,590</strong> exactly - add GhostProbe Pro in remarks</li>
+        <li><span>4</span>Click Paid below and DM screenshot to <strong style="color:var(--neon2)">@0x4ura</strong> on Instagram</li>
+      </ul>
+      <div class="upi-confirm-note">Plan activated within 2-4 hours after verification. DM screenshot to @0x4ura on Instagram.</div>
+    </div>
+    <div id="pay-paypal" class="paypal-section" style="display:none">
+      <div class="paypal-email-box"><strong id="paypalEmailDisplay">YOUR_PAYPAL@email.com</strong>Send PayPal Friends and Family to this address</div>
+      <div class="upi-amount-badge" style="width:100%"><strong id="paypalAmount">$19.00 USD</strong>Select Friends and Family to avoid fees</div>
+      <ul class="upi-steps">
+        <li><span>1</span>Open PayPal, Send Money, Friends and Family</li>
+        <li><span>2</span>Send to the email above</li>
+        <li><span>3</span>Amount: <strong id="paypalAmountStep" style="color:var(--green)">$19.00</strong> - Note: GhostProbe Pro and your email</li>
+        <li><span>4</span>DM payment screenshot to <strong style="color:var(--neon2)">@0x4ura</strong> on Instagram</li>
+      </ul>
+      <div class="upi-confirm-note">Plan activated within 2-4 hours after verification.</div>
+    </div>
+    <div class="pay-divider"></div>
+    <div class="fg" style="width:100%;margin-bottom:8px">
+      <label style="font-family:var(--fm);font-size:.65rem;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-bottom:5px;display:block">Transaction ID</label>
+      <input class="fi" id="txnIdInput" type="text" placeholder="Enter UPI or PayPal transaction ID" autocomplete="off" spellcheck="false"/>
+      <div class="msg msg-err" id="txnErr" style="margin-top:6px"></div>
+    </div>
+    <button class="pay-confirm-btn pay-confirm-pro" id="payConfirmBtn" onclick="handlePaymentConfirm()">Verify &amp; Activate Plan Instantly</button>
+    <div class="pay-legal">Enter your transaction ID above. Plan activates instantly after verification. Non-refundable after activation.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="tott" id="tott"></div><div class="totm" id="totm"></div></div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
